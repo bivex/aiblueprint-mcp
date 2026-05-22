@@ -204,3 +204,11 @@ This project incorporates architecture and patterns from [autocad-mcp](https://g
 - [uv](https://docs.astral.sh/uv/) package manager
 - LibreCAD (optional, for PNG previews)
 - 0 software licenses — ezdxf is MIT, LibreCAD is GPLv2
+
+## Acknowledgments
+
+- **Hermes** (AI coding agent) — co-author. Designed and implemented entity offset, fillet, dimension overrides, solid fills, and LibreCAD preview integration.
+- **DeepSeek V4 Pro** — the model that powered every line of this project. Fast, precise, never hallucinated a dimension.
+- **[Julian Goldie](https://www.youtube.com/@JulianGoldieSEO)** — for the relentless push to build in public and ship real tools, not just prompts.
+- **[Puran Water LLC](https://github.com/puran-water/autocad-mcp)** — upstream autocad-mcp project (MIT). The ezdxf backend architecture, MCP tool dispatch pattern, and command result types are adapted from their v3.1 release.
+- **[LibreCAD](https://librecad.org/)** — the open-source 2D CAD engine that makes $0 drafting possible.
