@@ -1,0 +1,32 @@
+[project]
+name = "aiblueprint-mcp"
+version = "0.1.0"
+description = "MCP server for headless DXF generation via ezdxf + LibreCAD preview — purpose-built for site plans and architectural drafting"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=1.2.1,<2.0",
+    "ezdxf>=0.18",
+    "matplotlib>=3.7",
+    "Pillow>=10.0.0",
+    "structlog>=24.0.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[project.scripts]
+aiblueprint-mcp = "aiblueprint_mcp.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aiblueprint_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

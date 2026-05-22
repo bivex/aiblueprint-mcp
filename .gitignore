@@ -1,0 +1,20 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+
+# Distribution
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# Output
+*.dxf
+*.png
+output/
