@@ -209,6 +209,6 @@ This project incorporates architecture and patterns from [autocad-mcp](https://g
 
 - **Hermes** (AI coding agent) — co-author. Designed and implemented entity offset, fillet, dimension overrides, solid fills, and LibreCAD preview integration.
 - **DeepSeek V4 Pro** — the model that powered every line of this project. Fast, precise, never hallucinated a dimension.
-- **[Julian Goldie](https://www.youtube.com/@JulianGoldieSEO)** — for the relentless push to build in public and ship real tools, not just prompts.
+- **[Julian Goldie](https://www.youtube.com/@JulianGoldieSEO)** — for the relentless push to build in public and ship real tools, not just prompts. Join his [AI Profit Lab](https://www.skool.com/ai-profit-lab-7462/about?ref=77c45f8dcc5f49baad3210f88b3ad519) on Skool.
 - **[Puran Water LLC](https://github.com/puran-water/autocad-mcp)** — upstream autocad-mcp project (MIT). The ezdxf backend architecture, MCP tool dispatch pattern, and command result types are adapted from their v3.1 release.
 - **[LibreCAD](https://librecad.org/)** — the open-source 2D CAD engine that makes $0 drafting possible.
