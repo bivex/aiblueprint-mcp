@@ -6,11 +6,17 @@ Based on autocad-mcp's ezdxf_backend (MIT), extended for site-plan drafting:
   - dimension style overrides (dimtxt, dimasz, dimlunit)
   - solid-fill hatch support
   - LibreCAD preview via dxf2png
+
+Configuration via environment variables:
+  AIBLUEPRINT_LIBRECAD_BIN — path to librecad executable
+  AIBLUEPRINT_WORKSPACE    — working directory for preview renders
+  DISPLAY                  — X11 display for WSLg/Linux GUI (default: :0)
 """
 
 from __future__ import annotations
 
 import math
+import os
 from pathlib import Path
 from typing import Any
 
@@ -21,10 +27,29 @@ from aiblueprint_mcp.types import CommandResult
 
 log = structlog.get_logger()
 
-# ── LibreCAD paths ──────────────────────────────────────────────────────
-LIBRECAD_BIN = Path.home() / "workspace/LibreCAD/unix/librecad"
-WORKSPACE = Path.home() / "workspace"
-DISPLAY = ":0"
+# ── Configurable paths ─────────────────────────────────────────────────
+def _find_librecad() -> Path:
+    """Resolve LibreCAD binary from env or common locations."""
+    env = os.environ.get("AIBLUEPRINT_LIBRECAD_BIN", "")
+    if env:
+        return Path(env)
+
+    # Common install locations
+    candidates = [
+        Path.home() / "workspace/LibreCAD/unix/librecad",
+        Path("/usr/bin/librecad"),
+        Path("/usr/local/bin/librecad"),
+        Path.home() / "LibreCAD/unix/librecad",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]  # fallback — user will get a clear error if missing
+
+
+LIBRECAD_BIN = _find_librecad()
+WORKSPACE = Path(os.environ.get("AIBLUEPRINT_WORKSPACE", str(Path.home() / "workspace")))
+DISPLAY = os.environ.get("DISPLAY", ":0")
 
 
 class AIBlueprintBackend:
@@ -843,7 +868,11 @@ class AIBlueprintBackend:
         # Render with LibreCAD
         librecad = LIBRECAD_BIN
         if not librecad.exists():
-            return CommandResult(ok=False, error=f"LibreCAD not found at {librecad}")
+            return CommandResult(ok=False, error=(
+                f"LibreCAD not found at {librecad}. "
+                "Set AIBLUEPRINT_LIBRECAD_BIN to your librecad path, "
+                "or build from source: https://docs.librecad.org/en/latest/appx/build.html"
+            ))
 
         try:
             result = subprocess.run(

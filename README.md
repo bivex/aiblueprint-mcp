@@ -1,48 +1,206 @@
 # AIBlueprint MCP
 
-MCP server for headless DXF generation via ezdxf + LibreCAD preview — purpose-built for site plans and architectural drafting.
+> MCP server for headless DXF generation via ezdxf + LibreCAD preview — purpose-built for site plans, architectural drafting, and pool bid layouts.
 
-## Tools
+Built on the ezdxf backend architecture from [autocad-mcp](https://github.com/puran-water/autocad-mcp) (MIT), extended with offset, fillet, dimension overrides, solid fills, and LibreCAD integration. No AutoCAD required — runs on Linux, macOS, WSL, or a Chromebook.
 
-| Tool | Description |
-|------|-------------|
-| `drawing` | File management: create, open, info, save |
-| `entity` | Entity CRUD: lines, polylines, circles, rectangles, arcs, text, hatches. Modify: copy, move, rotate, scale, mirror, offset, fillet, array, erase |
-| `layer` | Layer management: list, create, set current, set properties, freeze/thaw, lock/unlock |
-| `block` | Block definition, insertion, attributes |
-| `annotation` | Dimensions (aligned, linear, angular, radius with style overrides), leaders, text |
-| `view` | Screenshot (matplotlib) and LibreCAD preview (dxf2png) |
+## Why This Exists
 
-## Key Features
+AutoCAD MCP servers exist, but they require Windows and an AutoCAD license ($600+/year). LibreCAD is free and open-source, but has no scripting API — its "API" is the DXF file format.
 
-- **entity_offset** — offset closed polylines inward/outward for deck bands, setbacks, concentric shapes
-- **entity_fillet** — fillet two lines with a radius arc for rounded corners
-- **Dimension overrides** — dimtxt, dimasz, dimlunit, dimclrd, dimclre, dimclrt, dimtxsty
-- **Solid hatch fills** — pattern="SOLID" for water features, hardscape
-- **LibreCAD preview** — dxf2png integration for instant visual feedback
-- **0 software license cost** — ezdxf is MIT, LibreCAD is GPL
+AIBlueprint bridges the gap: an MCP server that generates DXF via ezdxf, renders previews through LibreCAD's `dxf2png`, and exposes the same tool interface LLMs already know from autocad-mcp — all at $0 in software costs.
 
-## Usage
+## Quick Start
 
 ```bash
-# Install
-git clone https://github.com/thebossnow/aiblueprint-mcp
+git clone https://github.com/thebossnow/aiblueprint-mcp.git
 cd aiblueprint-mcp
 uv sync
-
-# Run as MCP server (stdio)
 uv run aiblueprint-mcp
 ```
 
-Configure in your MCP client (Claude Desktop, Hermes, etc.):
+### Configure LibreCAD (for previews)
+
+```bash
+# Set path to your librecad binary (required for previews)
+export AIBLUEPRINT_LIBRECAD_BIN=/path/to/librecad
+
+# Optional: working directory for preview renders
+export AIBLUEPRINT_WORKSPACE=/path/to/workspace
+```
+
+**Don't have LibreCAD?** The server works without it — you just won't get PNG previews. [Build from source](https://docs.librecad.org/en/latest/appx/build.html) or install via your package manager (`sudo apt install librecad` on Debian/Ubuntu).
+
+### MCP Client Configuration
+
+Add to your MCP client (Claude Desktop, Hermes, etc.):
 
 ```json
 {
   "mcpServers": {
     "aiblueprint-mcp": {
       "command": "uv",
-      "args": ["run", "--directory", "/path/to/aiblueprint-mcp", "aiblueprint-mcp"]
+      "args": ["run", "--directory", "/path/to/aiblueprint-mcp", "aiblueprint-mcp"],
+      "env": {
+        "AIBLUEPRINT_LIBRECAD_BIN": "/path/to/librecad",
+        "AIBLUEPRINT_WORKSPACE": "/path/to/workspace"
+      }
     }
   }
 }
 ```
+
+## Tools
+
+### `drawing` — File Management
+
+| Operation | Description | Data |
+|-----------|-------------|------|
+| `create` | New empty drawing | `{name?}` |
+| `open` | Open existing DXF | `{path}` |
+| `info` | Layers, entity count, blocks | — |
+| `save` | Save to path | `{path}` |
+
+### `entity` — Entity CRUD + Modification
+
+**Create:**
+
+| Operation | Parameters |
+|-----------|------------|
+| `create_line` | `x1, y1, x2, y2, layer?` |
+| `create_circle` | `data: {cx, cy, radius}, layer?` |
+| `create_polyline` | `points: [[x,y],...], data: {closed?}, layer?` |
+| `create_rectangle` | `x1, y1, x2, y2, layer?` |
+| `create_arc` | `data: {cx, cy, radius, start_angle, end_angle}, layer?` |
+| `create_text` | `data: {x, y, text, height?, rotation?}, layer?` |
+| `create_mtext` | `data: {x, y, width, text, height?}, layer?` |
+| `create_hatch` | `entity_id, data: {pattern?, scale?}` |
+
+**Read:** `list` (by layer), `get` (by entity_id)
+
+**Modify:**
+
+| Operation | Notes |
+|-----------|-------|
+| `copy` / `move` / `rotate` / `scale` / `mirror` | Standard CAD transforms |
+| `offset` | ⭐ Offset closed polylines — deck bands, setbacks |
+| `fillet` | ⭐ Fillet two lines with a radius arc + auto-trim |
+| `array` | Rectangular array (rows × cols) |
+| `erase` | By entity_id or `"last"` |
+
+### `layer` — Layer Management
+
+`list`, `create`, `set_current`, `set_properties`, `freeze`, `thaw`, `lock`, `unlock`
+
+Colors: `red`, `yellow`, `green`, `cyan`, `blue`, `magenta`, `white`, `grey`, `lightgrey`
+
+### `block` — Blocks + Attributes
+
+`list`, `insert`, `insert_with_attributes`, `get_attributes`, `update_attribute`, `define`
+
+### `annotation` — Dimensions, Text, Leaders
+
+| Operation | Notes |
+|-----------|-------|
+| `create_text` | Single-line text with rotation |
+| `create_dimension_aligned` | ⭐ With `dim_overrides` |
+| `create_dimension_linear` | ⭐ With `dim_overrides` |
+| `create_dimension_angular` | ⭐ With `dim_overrides` |
+| `create_dimension_radius` | ⭐ With `dim_overrides` |
+| `create_leader` | Leader line + mtext |
+
+**Dimension overrides:** `dimtxt`, `dimasz`, `dimlunit`, `dimclrd`, `dimclre`, `dimclrt`, `dimtxsty`
+
+Example:
+```json
+{
+  "operation": "create_dimension_aligned",
+  "data": {
+    "x1": 0, "y1": 0, "x2": 100, "y2": 0, "offset": -5,
+    "dim_overrides": {"dimtxt": 1.75, "dimasz": 1.25, "dimlunit": 2}
+  }
+}
+```
+
+### `view` — Previews + Screenshots
+
+| Operation | Description |
+|-----------|-------------|
+| `preview` | Save DXF + render PNG via LibreCAD `dxf2png` — returns file paths |
+| `screenshot` | Render DXF as base64 PNG via matplotlib (no LibreCAD needed) |
+
+## Hatch Patterns
+
+| Pattern | Use |
+|---------|-----|
+| `SOLID` | Water features, colored surfaces |
+| `ANSI31` | Single diagonal hatch |
+| `ANSI37` | Dense cross-hatch — hardscape, concrete |
+| `ANSI32` | Wide cross-hatch |
+| `AR-CONC` | Concrete texture |
+| `EARTH` | Earth/soil fill |
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AIBLUEPRINT_LIBRECAD_BIN` | Auto-detects from common locations | Path to `librecad` executable |
+| `AIBLUEPRINT_WORKSPACE` | `~/workspace` | Working directory for preview renders |
+| `DISPLAY` | `:0` | X11 display (for WSLg / Linux GUI) |
+
+## Python API
+
+You can also use the backend directly without the MCP server:
+
+```python
+from aiblueprint_mcp.backend import AIBlueprintBackend
+import asyncio
+
+async def main():
+    b = AIBlueprintBackend()
+    await b.initialize()
+    await b.drawing_create("my_plan")
+
+    # Draw a 100×80 ft lot with pool deck
+    await b.create_rectangle(0, 0, 100, 80, layer="LOT")
+    deck = await b.create_rectangle(10, 20, 50, 60, layer="DECK")
+
+    # Offset deck band inward 4 ft
+    inner = await b.entity_offset(deck.payload["handle"], -4.0)
+
+    # Add pool with solid blue fill
+    pool = await b.create_rectangle(18, 28, 42, 52, layer="POOL")
+    await b.create_hatch(pool.payload["handle"], "SOLID")
+
+    # Cross-hatch the deck
+    await b.create_hatch(inner.payload["handle"], "ANSI37", scale=12.0)
+
+    # Fillet a corner
+    l1 = await b.create_line(50, 60, 50, 20, layer="DECK")
+    l2 = await b.create_line(50, 20, 10, 20, layer="DECK")
+    await b.entity_fillet(l1.payload["handle"], l2.payload["handle"], 8.0)
+
+    # Dimension with style overrides
+    await b.create_dimension_aligned(0, 0, 100, 0, -5,
+        dim_overrides={"dimtxt": 1.75, "dimasz": 1.25, "dimlunit": 2})
+
+    # Save and preview
+    await b.drawing_save("/tmp/my_plan.dxf")
+    result = await b.preview()
+    print(result.payload["png_path"])
+
+asyncio.run(main())
+```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+This project incorporates architecture and patterns from [autocad-mcp](https://github.com/puran-water/autocad-mcp) by Puran Water LLC, also MIT-licensed. The ezdxf backend, MCP tool dispatch pattern, and command result types are adapted from autocad-mcp v3.1. Entity offset, fillet, dimension overrides, solid fills, and LibreCAD preview are original additions.
+
+## Requirements
+
+- Python 3.10+
+- [uv](https://docs.astral.sh/uv/) package manager
+- LibreCAD (optional, for PNG previews)
+- 0 software licenses — ezdxf is MIT, LibreCAD is GPLv2
